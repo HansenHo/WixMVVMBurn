@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Product Id="*" Name="SimpleSetupProject" Language="1033" Version="1.0.0.0" Manufacturer="MySelf Company" UpgradeCode="a845b946-c355-476a-8ed3-36cf2d4130e7">
+		<Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+
+		<MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+		<MediaTemplate EmbedCab="yes" />
+
+		<Feature Id="ProductFeature" Title="SimpleSetupProject" Level="1">
+			<ComponentGroupRef Id="ProductComponents" />
+		</Feature>
+	</Product>
+
+	<Fragment>
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="ProgramFilesFolder">
+				<Directory Id="INSTALLFOLDER" Name="SimpleSetupProject" />
+			</Directory>
+		</Directory>
+	</Fragment>
+
+	<Fragment>
+		<ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+			<!-- TODO: Remove the comments around this Component element and the ComponentRef below in order to add resources to this installer. -->
+			 <Component Id="CMP_TextFile1.txt" Guid="BCF8EF6D-D8AA-4B35-94B0-A360FF189C54">
+				 <File Id="FILE_TextFile1.txt" Source="TextFile1.txt" KeyPath="yes" />
+			 </Component> 
+		</ComponentGroup>
+	</Fragment>
+</Wix>

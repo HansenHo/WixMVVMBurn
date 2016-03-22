@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Bundle Name="SimpleSetupBootstrapper" Version="1.0.0.0" Manufacturer="MySelf Company" UpgradeCode="5caf30fe-dcc7-4854-ae20-68dff7820bbe">
+		<BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.RtfLicense" />
+
+		<Chain>
+			<!-- TODO: Define the list of chained packages. -->
+			 <MsiPackage SourceFile="$(var.SimpleSetupProject.TargetDir)SimpleSetupProject.msi" /> 
+		</Chain>
+	</Bundle>
+</Wix>

@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Threading;
+using System.Xml.Linq;
 using WixMVVMBurnUI.Core;
 using WixMVVMBurnUI.Models;
 using WixMVVMBurnUI.ViewModels;
@@ -13,17 +15,42 @@ namespace WixMVVMBurnUI
 {
     public partial class WPFBootstrapper : Wix.BootstrapperApplication
     {
+        public const string ManifestNamespace = "http://schemas.microsoft.com/wix/2010/BootstrapperApplicationData";
+
         public static Dispatcher Dispatcher { get; set; }
+
+        ///
+        /// Fetch BootstrapperApplicationData.xml and parse into XDocument.
+        ///
+        public XElement ApplicationData
+        {
+            get
+            {
+                var workingFolder = System.IO.Path.GetDirectoryName(this.GetType().Assembly.Location);
+                var bootstrapperDataFilePath = System.IO.Path.Combine(workingFolder, "BootstrapperApplicationData.xml");
+
+                using (var reader = new System.IO.StreamReader(bootstrapperDataFilePath))
+                {
+                    var xml = reader.ReadToEnd();
+                    var xDoc = XDocument.Parse(xml);
+                    return xDoc.Element(XName.Get("BootstrapperApplicationData", ManifestNamespace));
+                }
+            }
+        }
+
+        public List<BundlePackage> BundlePackages { get; private set; }
+
+        public string DisplayName { get; private set; }
 
         /// <summary>The main user interface for the bootstrap application.</summary>
         private BootstrapperApplicationModel model;
 
-        private BootstrapperApplicationViewModelBase viewModel;
+        private MainWindowViewModel viewModel;
         private BootstrapperApplicationWindow mainView;
 
         #region GetApplicationUI
 
-        /// <summary>Gets the <see cref="BaseBAWindow" /> derivation from the configured UI implementation assembly.</summary>
+        /// <summary>Gets the <see cref="BootstrapperApplicationWindow" /> derivation from the configured UI implementation assembly.</summary>
         /// <returns>A BaseBAWindow instance or null.</returns>
         private BootstrapperApplicationWindow GetApplicationUI()
         {
@@ -33,29 +60,71 @@ namespace WixMVVMBurnUI
 
             if (!string.IsNullOrEmpty(implType))
             {
-                LogVerbose("configured implementation = " + implType);
+                this.LogVerbose("configured implementation = " + implType);
                 try
                 {
                     type = GetUITypeFromAssembly(implType);
                 }
-                catch (Exception e) { LogError(e); }
+                catch (Exception e)
+                {
+                    this.LogError(e);
+                }
             }
 
             if (type != null)
             {
-                LogVerbose("full type name = " + type.AssemblyQualifiedName);
+                this.LogVerbose("full type name = " + type.AssemblyQualifiedName);
                 try
                 {
-                    retVal = Activator.CreateInstance(type) as BootstrapperApplicationWindow;
+                    retVal = Activator.CreateInstance(type, this.viewModel) as BootstrapperApplicationWindow;
                 }
-                catch (Exception e) { LogError(e); }
+                catch (Exception e)
+                {
+                    this.LogError(e);
+                }
             }
 
-            if (retVal != null)
+            return retVal;
+        }
+
+        /// <summary>Gets the <see cref="BootstrapperApplicationWindow" /> derivation from the configured UI implementation assembly.</summary>
+        /// <returns>A BaseBAWindow instance or null.</returns>
+        private MainWindowViewModel GetApplicationMainViewModel()
+        {
+            MainWindowViewModel retVal = null;
+            string implType = GetAppSetting("BootstrapperUI");
+            Type type = null;
+
+            if (!string.IsNullOrEmpty(implType))
             {
-                retVal.View = this;
+                this.LogVerbose("configured implementation = " + implType);
+                try
+                {
+                    type = GetMainViewModelTypeFromAssembly(implType);
+                }
+                catch (Exception e)
+                {
+                    this.LogError(e);
+                }
             }
 
+            if (type != null)
+            {
+                this.LogVerbose("full type name = " + type.AssemblyQualifiedName);
+                try
+                {
+                    retVal = Activator.CreateInstance(type) as MainWindowViewModel;
+                }
+                catch (Exception e)
+                {
+                    this.LogError(e);
+                }
+            }
+            else
+            {
+                retVal = new MainWindowViewModel();
+            }
+            retVal.Initialize(this.model);
             return retVal;
         }
 
@@ -80,7 +149,7 @@ namespace WixMVVMBurnUI
                 }
                 catch (Exception ex)
                 {
-                    LogError("An error occurred loading assembly {0}. Details: {1}", assemblyName, ex);
+                    this.LogError("An error occurred loading assembly {0}. Details: {1}", assemblyName, ex);
                 }
             }
 
@@ -90,6 +159,39 @@ namespace WixMVVMBurnUI
                 if (attrs != null && attrs.Length > 0 && attrs[0] != null)
                 {
                     baType = attrs[0].StartupWindowType;
+                }
+            }
+
+            return baType;
+        }
+
+        /// <summary>Gets the application main view model implementation type.</summary>
+        /// <param name="assemblyName">The name of the assembly that should defines the <see cref="StartupWindowAttribute"/>.</param>
+        /// <returns>The type specified by the first assembly that has the <see cref="StartupWindowAttribute"/>.</returns>
+        private Type GetMainViewModelTypeFromAssembly(string assemblyName)
+        {
+            Type baType = null;
+            Assembly asm = null;
+            StartupWindowAttribute[] attrs = null;
+
+            if (!string.IsNullOrEmpty(assemblyName))
+            {
+                try
+                {
+                    asm = AppDomain.CurrentDomain.Load(assemblyName);
+                }
+                catch (Exception ex)
+                {
+                    this.LogError("An error occurred loading assembly {0}. Details: {1}", assemblyName, ex);
+                }
+            }
+
+            if (asm != null)
+            {
+                attrs = (StartupWindowAttribute[])asm.GetCustomAttributes(typeof(StartupWindowAttribute), false);
+                if (attrs != null && attrs.Length > 0 && attrs[0] != null)
+                {
+                    baType = attrs[0].StartupMainViewModelType;
                 }
             }
 
@@ -119,75 +221,139 @@ namespace WixMVVMBurnUI
 
         #endregion GetAppSetting
 
-        #region SetMainWindow
+        #region OnWindowClosed
 
-        /// <summary>Sets the main window to the specified <paramref name="window"/>.</summary>
-        /// <param name="window">The new main window.</param>
-        public void SetMainWindow(BootstrapperApplicationWindow window)
+        /// <summary>Raised when the main window of the bootstrapper is closed.</summary>
+        /// <param name="sender">The sender of the event.</param>
+        /// <param name="e">The arguments of the event.</param>
+        private void OnWindowClosed(object sender, EventArgs e)
         {
-            if (window == null)
-            {
-                Exception error = new ArgumentNullException("window");
-                LogError(error);
-                throw error;
-            }
-            mainView.Closed -= OnWindowClosed;
-            mainView = window;
-            mainView.Closed += OnWindowClosed;
-            UIDispatcher = mainView.Dispatcher;
+            Engine.Quit(0);
         }
 
-        #endregion SetMainWindow
+        #endregion OnWindowClosed
 
         #region Run
+
+        public WPFBootstrapper()
+        {
+            this.model = new BootstrapperApplicationModel(this);
+        }
 
         /// <summary>Called when the bootstrap application is run.</summary>
         protected override void Run()
         {
-            this.model = new BootstrapperApplicationModel(this);
-            this.viewModel = new BootstrapperApplicationViewModelBase(this.model);
+            System.Diagnostics.Debugger.Launch();
+            this.Initialize();
+            this.viewModel = GetApplicationMainViewModel();
 
-            this.mainView = GetApplicationUI();
+            //
+            // Call Engine.Detect, asking the engine to figure out what's on the machine.
+            // The engine will run async and use callbacks for reporting results.
+            //
 
-            if (mainView != null)
+            if (this.model.Command.Display == Wix.Display.Passive || this.model.Command.Display == Wix.Display.Full)
             {
-                if (Dispatcher.CurrentDispatcher != null)
+                this.mainView = this.GetApplicationUI();
+                if (mainView != null)
                 {
-                    try
+                    if (Dispatcher.CurrentDispatcher != null)
                     {
-                        if (this.model.Command.Display == Wix.Display.Passive || this.model.Command.Display == Wix.Display.Full)
+                        try
                         {
-                            this.model.SetBurnVariable
-                            UIDispatcher = mainView.Dispatcher;
-                            mainView.Closed += OnWindowClosed;
-                            mainView.Show();
+                            Dispatcher = this.mainView.Dispatcher;
+                            this.mainView.Closed += OnWindowClosed;
+                            this.mainView.Show();
+
+                            this.Engine.Detect();
+                            this.Engine.CloseSplashScreen();
+
+                            Dispatcher.Run();
+                            this.Engine.Quit(this.model.FinalResult);
                         }
-
-                        this.Engine.Detect();
-
-                        Dispatcher.Run();
-                        this.Engine.Quit(this.model.FinalResult);
+                        catch (Exception ex)
+                        {
+                            this.LogError(ex);
+                            this.Engine.Quit(400);
+                        }
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        this.LogError(ex);
+                        this.LogError("No current dispatcher.");
                         this.Engine.Quit(400);
                     }
                 }
                 else
                 {
-                    this.LogError("No current dispatcher.");
-                    this.Engine.Quit(400);
+                    this.LogError("Failed to get an UI implementation.");
+                    this.Engine.Quit(404);
                 }
             }
             else
             {
-                this.LogError("Failed to get an UI implementation.");
-                this.Engine.Quit(404);
+                //Slient Mode
+                try
+                {
+                    this.Engine.Detect();
+                    this.Engine.Quit(this.model.FinalResult);
+                }
+                catch (Exception ex)
+                {
+                    this.LogError(ex);
+                    this.Engine.Quit(400);
+                }
             }
         }
 
         #endregion Run
+
+        #region Bundle and Feature Information detecting
+
+        private void HandleExistingPackageDetected(object sender, Wix.DetectRelatedMsiPackageEventArgs e)
+        {
+            string existingPackageProductCode = e.ProductCode;
+
+            Wix.RelatedOperation actionToBeApplicedToExistingPackage = e.Operation;
+            string existingPackageId = e.PackageId;
+            Version existingPackageVersion = e.Version;
+
+            //update your model objects here (search models by PackageId)
+        }
+
+        private void HandleExistingBundleDetected(object sender, Wix.DetectRelatedBundleEventArgs e)
+        {
+            Version existingBundleVersion = e.Version;
+            string existingBundleProductCode = e.ProductCode;
+            Wix.RelatedOperation actionToBeAppliedToExistingBundle = e.Operation;
+
+            //update your model object here
+        }
+
+        /// <summary>
+        /// when engine detects a package, populate the appropriate local objects,
+        /// including current installed state of the package on the system
+        /// </summary>
+        private void SetPackageDetectedState(object sender, Wix.DetectPackageCompleteEventArgs args)
+        {
+            var package = BundlePackages.FirstOrDefault(pkg => pkg.Package == args.PackageId);
+            Wix.PackageState currentState = args.State;
+            package.CurrentInstallState = currentState;
+        }
+
+        /// <summary>
+        /// when engine detects a feature, populate the appropriate local objects,
+        /// including current installed state of the package on the system
+        /// </summary>
+        private void SetFeatureDetectedState(object sender, Wix.DetectMsiFeatureEventArgs args)
+        {
+            var package = BundlePackages.FirstOrDefault(pkg => pkg.Package == args.PackageId);
+            var feature = package.AllFeatures.FirstOrDefault(feat => feat.Feature == args.FeatureId);
+            Wix.FeatureState currentState = args.State;
+
+            feature.CurrentInstallState = args.State;
+        }
+
+        #endregion Bundle and Feature Information detecting
 
         #region Logging
 
@@ -198,6 +364,26 @@ namespace WixMVVMBurnUI
             if (!string.IsNullOrEmpty(message))
             {
                 WriteToLog(Wix.LogLevel.Verbose, message);
+            }
+        }
+
+        /// <summary>Writes the specified <paramref name="message"/> to the log file.</summary>
+        /// <param name="message">The message to write.</param>
+        public void LogStandard(string message)
+        {
+            if (!string.IsNullOrEmpty(message))
+            {
+                WriteToLog(Wix.LogLevel.Standard, message);
+            }
+        }
+
+        /// <summary>Writes the specified <paramref name="message"/> to the log file.</summary>
+        /// <param name="message">The message to write.</param>
+        public void LogDebug(string message)
+        {
+            if (!string.IsNullOrEmpty(message))
+            {
+                WriteToLog(Wix.LogLevel.Debug, message);
             }
         }
 
@@ -240,7 +426,12 @@ namespace WixMVVMBurnUI
         /// <param name="message">The message to log.</param>
         public void WriteToLog(Wix.LogLevel level, string message)
         {
-            Engine.Log(level, string.Format("WixWPF: {0}", message ?? string.Empty));
+            this.Engine.Log(level, string.Format("WixBurnUI: {0}", message ?? string.Empty));
+           
+            if (this.model != null)
+            {
+                this.TryInvoke(new Action(() => { this.model.OnLogMessage(level, message); }));
+            }
         }
 
         #endregion Logging
@@ -257,10 +448,77 @@ namespace WixMVVMBurnUI
                 {
                     Dispatcher.Invoke(action, null);
                 }
+                else
+                {
+                    action();
+                }
             }
-            catch (Exception e) { LogError("An error occurred invoking an action. Details: {0}", e); }
+            catch (Exception e) { this.LogError("An error occurred invoking an action. Details: {0}", e); }
         }
 
         #endregion TryInvoke
+
+        #region Initialize
+
+        public void Initialize()
+        {
+            //
+            // parse the ApplicationData to find included packages and features
+            //
+            var bundleManifestData = this.ApplicationData;
+            this.DisplayName = bundleManifestData
+                                      .Element(XName.Get("WixBundleProperties", ManifestNamespace))
+                                      .Attribute("DisplayName")
+                                      .Value;
+
+            var mbaPrereqs = bundleManifestData.Descendants(XName.Get("WixMbaPrereqInformation", ManifestNamespace))
+                                               .Select(x => new MBAPrereqPackage(x))
+                                               .ToList();
+
+            //
+            //exclude the MBA prereq packages, such as the .Net 4 installer
+            //
+            var pkgs = bundleManifestData.Descendants(XName.Get("WixPackageProperties", ManifestNamespace))
+                                         .Select(x => new BundlePackage(x))
+                                         .Where(pkg => !mbaPrereqs.Any(preReq => preReq.PackageId == pkg.Package));
+
+            this.BundlePackages = new List<BundlePackage>();
+
+            //
+            // Add the packages to a collection of BundlePackages
+            //
+            this.BundlePackages.AddRange(pkgs);
+
+            //
+            // check for features and associate them with their parent packages
+            //
+            var featureNodes = bundleManifestData.Descendants(XName.Get("WixPackageFeatureInfo", ManifestNamespace));
+            foreach (var featureNode in featureNodes)
+            {
+                var feature = new PackageFeature(featureNode);
+                var parentPkg = this.BundlePackages.First(pkg => pkg.Package == feature.PackageId);
+                parentPkg.AllFeatures.Add(feature);
+                feature.Package = parentPkg;
+            }
+
+            foreach (var bundle in this.BundlePackages)
+            {
+                foreach (var featureNode in bundle.AllFeatures)
+                {
+                    if (string.IsNullOrWhiteSpace(featureNode.ParentId))
+                    {
+                        bundle.RootFeature = featureNode;
+                    }
+                    else
+                    {
+                        var parent = bundle.AllFeatures.First(p => p.Feature == featureNode.ParentId);
+                        parent.Features.Add(featureNode);
+                        featureNode.Parent = parent;
+                    }
+                }
+            }
+        }
+
+        #endregion Initialize
     }
 }

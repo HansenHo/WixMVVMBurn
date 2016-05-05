@@ -1,13 +1,14 @@
 ﻿namespace WixMVVMBurnUI.Views
 {
     using System;
+    using System.Windows.Interop;
     using Catel.Windows;
     using ViewModels;
 
     /// <summary>
     /// Interaction logic for BootstrapperApplicationWindow.xaml.
     /// </summary>
-    public partial class BootstrapperApplicationWindow : DataWindow
+    public class BootstrapperApplicationWindow : DataWindow
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="BootstrapperApplicationWindow"/> class.
@@ -23,12 +24,14 @@
         /// <remarks>
         /// This constructor can be used to use view-model injection.
         /// </remarks>
-        public BootstrapperApplicationWindow(BootstrapperApplicationViewModelBase viewModel)
+        public BootstrapperApplicationWindow(MainWindowViewModel viewModel)
             : base(viewModel)
         {
-            InitializeComponent();
+            this.Closed += (sender, e) => this.Dispatcher.InvokeShutdown(); // shutdown dispatcher when the window is closed.
+
+            viewModel.ViewWindowHandle = new WindowInteropHelper(this).EnsureHandle();
         }
 
-        
+
     }
 }

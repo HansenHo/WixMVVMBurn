@@ -4,7 +4,8 @@ namespace WixMVVMBurnUI.Models
 {
     /// <summary>A event arguments wrapper used when notifying WPF UI implementation of events.</summary>
     /// <typeparam name="T">Any derivation of <see cref="EventArgs"/>.</typeparam>
-    public class WPFBootstrapperEventArgs<T> where T : EventArgs
+    public class WPFBootstrapperEventArgs<T> : EventArgs
+        where T : EventArgs
     {
         #region Constructors
 

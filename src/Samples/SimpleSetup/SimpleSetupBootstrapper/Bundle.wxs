@@ -1,11 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+      xmlns:bal="http://schemas.microsoft.com/wix/BalExtension"
+         xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+  
 	<Bundle Name="SimpleSetupBootstrapper" Version="1.0.0.0" Manufacturer="MySelf Company" UpgradeCode="5caf30fe-dcc7-4854-ae20-68dff7820bbe">
-		<BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.RtfLicense" />
+    <BootstrapperApplicationRef Id="ManagedBootstrapperApplicationHost" >
+      <Payload SourceFile="BootstrapperCore.config" />
+      <Payload SourceFile="$(var.SimpleSetupBurnUI.TargetDir)Catel.Core.dll" />
+      <Payload SourceFile="$(var.SimpleSetupBurnUI.TargetDir)Catel.Extensions.Controls.dll" />
+      <Payload SourceFile="$(var.SimpleSetupBurnUI.TargetDir)Catel.MVVM.dll" />
+      <Payload SourceFile="$(var.SimpleSetupBurnUI.TargetDir)WixMVVMBurnUI.dll" />
+      <Payload SourceFile="$(var.SimpleSetupBurnUI.TargetDir)WixMVVMBurnUI.pdb" />
+      <Payload SourceFile="$(var.SimpleSetupBurnUI.TargetPath)" />
+    </BootstrapperApplicationRef>
 
-		<Chain>
+    <Chain DisableSystemRestore="yes">
+      <PackageGroupRef Id="NetFx452Web"/>
+
+      <RollbackBoundary />
 			<!-- TODO: Define the list of chained packages. -->
-			 <MsiPackage SourceFile="$(var.SimpleSetupProject.TargetDir)SimpleSetupProject.msi" /> 
+			 <MsiPackage SourceFile="$(var.SimpleSetupProject.TargetDir)SimpleSetupProject.msi"  EnableFeatureSelection="yes"/> 
 		</Chain>
 	</Bundle>
 </Wix>

@@ -8,6 +8,7 @@
 
 		<Feature Id="ProductFeature" Title="SimpleSetupProject" Level="1">
 			<ComponentGroupRef Id="ProductComponents" />
+			<Feature Id="SubFeature" AllowAdvertise="yes" Description="MyDescription"></Feature>
 		</Feature>
 	</Product>
 

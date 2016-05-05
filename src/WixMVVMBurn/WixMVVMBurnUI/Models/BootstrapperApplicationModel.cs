@@ -1,8 +1,10 @@
-﻿using System;
-using Microsoft.Tools.WindowsInstallerXml.Bootstrapper;
-
-namespace WixMVVMBurnUI.Models
+﻿namespace WixMVVMBurnUI.Models
 {
+    using System;
+    using System.Collections.Generic;
+    using Core;
+    using Microsoft.Tools.WindowsInstallerXml.Bootstrapper;
+
     public partial class BootstrapperApplicationModel
     {
         private const string BurnBundleInstallDirectoryVariable = "InstallFolder";
@@ -17,10 +19,19 @@ namespace WixMVVMBurnUI.Models
 
         public WPFBootstrapper Bootstrapper { get; private set; }
 
+        public List<BundlePackage> BundlePackages { get { return this.Bootstrapper.BundlePackages; } }
+
+        public string DisplayName { get { return this.Bootstrapper.DisplayName; } }
+
         /// <summary>
         /// Gets the bootstrapper command-line.
         /// </summary>
         public Command Command { get { return this.Bootstrapper.Command; } }
+
+        ///
+        /// Full application command line
+        ///
+        public string[] CommandLineArgs { get { return this.Command.GetCommandLineArgs(); } }
 
         /// <summary>
         /// Gets the bootstrapper engine.
@@ -91,20 +102,18 @@ namespace WixMVVMBurnUI.Models
             }
         }
 
-        public void ApplyAction(IntPtr handle)
-        {
-            this.Engine.Apply(handle);
-        }
+        ///
+        /// Requested action from the commandline
+        ///
+        public LaunchAction RunMode { get { return this.Command.Action; } }
 
-        public void LogMessage(string message)
-        {
-            this.Engine.Log(LogLevel.Standard, message);
-        }
+        ///
+        /// Requested display mode from the commandline
+        /// (Full, Passive/Silent, Embedded)
+        ///
+        public Display DisplayMode { get { return this.Command.Display; } }
 
-        public void PlanAction(LaunchAction action)
-        {
-            this.Engine.Plan(action);
-        }
+        public LaunchAction PlannedAction { get; set; }
 
         public void SetBurnVariable(string variableName, string value)
         {

@@ -1,19 +1,33 @@
-﻿namespace WixMVVMBurnUI.ViewModels
+﻿namespace WixMVVMBurnUI.Models
 {
     using System;
-    using Models;
     using Wix = Microsoft.Tools.WindowsInstallerXml.Bootstrapper;
 
-    public partial class BootstrapperApplicationViewModelBase
+    public partial class BootstrapperApplicationModel
     {
-
-        /// <summary>Called when the engine has begun installing the bundle.</summary>
+        /// <summary>
+        /// Called when the engine has begun installing the bundle.
+        /// </summary>
         /// <param name="args">The arguments of the event.</param>
-        public virtual void OnApplyBegin(WPFBootstrapperEventArgs<Wix.ApplyBeginEventArgs> args) { }
+        public void OnApplyBegin(WPFBootstrapperEventArgs<Wix.ApplyBeginEventArgs> args)
+        {
+            ApplyBegin?.Invoke(this, args);
+        }
+
+        /// <summary>
+        /// Called when the engine has begun installing the bundle.
+        /// </summary>
+        public event EventHandler<WPFBootstrapperEventArgs<Wix.ApplyBeginEventArgs>> ApplyBegin;
 
         /// <summary>Called when the engine has completed installing the bundle.</summary>
         /// <param name="args">The arguments of the event.</param>
-        public virtual void OnApplyComplete(WPFBootstrapperEventArgs<Wix.ApplyCompleteEventArgs> args) { }
+        public void OnApplyComplete(WPFBootstrapperEventArgs<Wix.ApplyCompleteEventArgs> args)
+        {
+            ApplyComplete?.Invoke(this, args);
+        }
+
+        /// <summary>Called when the engine has completed installing the bundle.</summary>
+        public event EventHandler<WPFBootstrapperEventArgs<Wix.ApplyCompleteEventArgs>> ApplyComplete;
 
         /// <summary>Called right after OnApplyBegin.</summary>
         /// <param name="args">Additional arguments for this event.</param>
@@ -230,6 +244,13 @@
         /// <summary>Called when the engine has completed removing the registration for the location and visibility of the bundle.</summary>
         /// <param name="args">The arguments of the event.</param>
         public virtual void OnUnregisterComplete(WPFBootstrapperEventArgs<Wix.UnregisterCompleteEventArgs> args) { }
+
+        /// <summary>
+        /// Called when the a message should be logged.
+        /// </summary>
+        /// <param name="level">The log level.</param>
+        /// <param name="message">The message.</param>
+        public virtual void OnLogMessage(Wix.LogLevel level, string message) { }
 
         /// <summary>Determines if the specified <paramref name="arguments"/> is valid.</summary>
         /// <typeparam name="T">The type of arguments.</typeparam>

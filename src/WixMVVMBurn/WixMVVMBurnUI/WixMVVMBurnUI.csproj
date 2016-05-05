@@ -116,7 +116,6 @@
     <Compile Include="Core\StateEnums.cs" />
     <Compile Include="Models\BootstrapperApplicationModel.Events.cs" />
     <Compile Include="Pages\IBootstrapperPage.cs" />
-    <Compile Include="ViewModels\MainWindowViewModel.Events.cs" />
     <Compile Include="Models\BootstrapperApplicationModel.cs" />
     <Compile Include="ViewModels\WPFBootstrapperEventArgs.cs" />
     <Compile Include="ViewModels\MainWindowViewModel.cs" />

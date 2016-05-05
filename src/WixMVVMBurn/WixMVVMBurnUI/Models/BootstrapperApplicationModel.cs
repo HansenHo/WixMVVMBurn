@@ -2,8 +2,9 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using Core;
-    using Microsoft.Tools.WindowsInstallerXml.Bootstrapper;
+    using Wix = Microsoft.Tools.WindowsInstallerXml.Bootstrapper;
 
     public partial class BootstrapperApplicationModel
     {
@@ -26,7 +27,7 @@
         /// <summary>
         /// Gets the bootstrapper command-line.
         /// </summary>
-        public Command Command { get { return this.Bootstrapper.Command; } }
+        public Wix.Command Command { get { return this.Bootstrapper.Command; } }
 
         ///
         /// Full application command line
@@ -36,7 +37,7 @@
         /// <summary>
         /// Gets the bootstrapper engine.
         /// </summary>
-        public Engine Engine { get { return this.Bootstrapper.Engine; } }
+        public Wix.Engine Engine { get { return this.Bootstrapper.Engine; } }
 
         /// <summary>
         /// Gets or sets the final result of this bootstrapper.
@@ -105,19 +106,68 @@
         ///
         /// Requested action from the commandline
         ///
-        public LaunchAction RunMode { get { return this.Command.Action; } }
+        public Wix.LaunchAction RunMode { get { return this.Command.Action; } }
 
         ///
         /// Requested display mode from the commandline
         /// (Full, Passive/Silent, Embedded)
         ///
-        public Display DisplayMode { get { return this.Command.Display; } }
+        public Wix.Display DisplayMode { get { return this.Command.Display; } }
 
-        public LaunchAction PlannedAction { get; set; }
+        public Wix.LaunchAction PlannedAction { get; set; }
 
         public void SetBurnVariable(string variableName, string value)
         {
             this.Engine.StringVariables[variableName] = value;
         }
+
+        #region Bundle and Feature Information detecting
+
+        private void HandleExistingPackageDetected(Wix.DetectRelatedMsiPackageEventArgs e)
+        {
+            string existingPackageProductCode = e.ProductCode;
+
+            Wix.RelatedOperation actionToBeApplicedToExistingPackage = e.Operation;
+            string existingPackageId = e.PackageId;
+            Version existingPackageVersion = e.Version;
+
+            //update your model objects here (search models by PackageId)
+        }
+
+        private void HandleExistingBundleDetected(Wix.DetectRelatedBundleEventArgs e)
+        {
+            Version existingBundleVersion = e.Version;
+            string existingBundleProductCode = e.ProductCode;
+            Wix.RelatedOperation actionToBeAppliedToExistingBundle = e.Operation;
+
+            //update your model object here
+        }
+
+        /// <summary>
+        /// when engine detects a package, populate the appropriate local objects,
+        /// including current installed state of the package on the system
+        /// </summary>
+        private void SetPackageDetectedState(Wix.DetectPackageCompleteEventArgs args)
+        {
+            var package = this.BundlePackages.FirstOrDefault(pkg => pkg.Package == args.PackageId);
+            Wix.PackageState currentState = args.State;
+            package.CurrentInstallState = currentState;
+        }
+
+        /// <summary>
+        /// when engine detects a feature, populate the appropriate local objects,
+        /// including current installed state of the package on the system
+        /// </summary>
+        private void SetFeatureDetectedState(Wix.DetectMsiFeatureEventArgs args)
+        {
+            var package = this.BundlePackages.FirstOrDefault(pkg => pkg.Package == args.PackageId);
+            var feature = package.AllFeatures.FirstOrDefault(feat => feat.Feature == args.FeatureId);
+            Wix.FeatureState currentState = args.State;
+
+            feature.CurrentInstallState = args.State;
+        }
+
+        #endregion Bundle and Feature Information detecting
+
     }
 }

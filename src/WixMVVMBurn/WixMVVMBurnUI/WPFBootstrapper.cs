@@ -307,54 +307,6 @@ namespace WixMVVMBurnUI
 
         #endregion Run
 
-        #region Bundle and Feature Information detecting
-
-        private void HandleExistingPackageDetected(object sender, Wix.DetectRelatedMsiPackageEventArgs e)
-        {
-            string existingPackageProductCode = e.ProductCode;
-
-            Wix.RelatedOperation actionToBeApplicedToExistingPackage = e.Operation;
-            string existingPackageId = e.PackageId;
-            Version existingPackageVersion = e.Version;
-
-            //update your model objects here (search models by PackageId)
-        }
-
-        private void HandleExistingBundleDetected(object sender, Wix.DetectRelatedBundleEventArgs e)
-        {
-            Version existingBundleVersion = e.Version;
-            string existingBundleProductCode = e.ProductCode;
-            Wix.RelatedOperation actionToBeAppliedToExistingBundle = e.Operation;
-
-            //update your model object here
-        }
-
-        /// <summary>
-        /// when engine detects a package, populate the appropriate local objects,
-        /// including current installed state of the package on the system
-        /// </summary>
-        private void SetPackageDetectedState(object sender, Wix.DetectPackageCompleteEventArgs args)
-        {
-            var package = BundlePackages.FirstOrDefault(pkg => pkg.Package == args.PackageId);
-            Wix.PackageState currentState = args.State;
-            package.CurrentInstallState = currentState;
-        }
-
-        /// <summary>
-        /// when engine detects a feature, populate the appropriate local objects,
-        /// including current installed state of the package on the system
-        /// </summary>
-        private void SetFeatureDetectedState(object sender, Wix.DetectMsiFeatureEventArgs args)
-        {
-            var package = BundlePackages.FirstOrDefault(pkg => pkg.Package == args.PackageId);
-            var feature = package.AllFeatures.FirstOrDefault(feat => feat.Feature == args.FeatureId);
-            Wix.FeatureState currentState = args.State;
-
-            feature.CurrentInstallState = args.State;
-        }
-
-        #endregion Bundle and Feature Information detecting
-
         #region Logging
 
         /// <summary>Writes the specified <paramref name="message"/> to the log file.</summary>
@@ -427,7 +379,7 @@ namespace WixMVVMBurnUI
         public void WriteToLog(Wix.LogLevel level, string message)
         {
             this.Engine.Log(level, string.Format("WixBurnUI: {0}", message ?? string.Empty));
-           
+
             if (this.model != null)
             {
                 this.TryInvoke(new Action(() => { this.model.OnLogMessage(level, message); }));

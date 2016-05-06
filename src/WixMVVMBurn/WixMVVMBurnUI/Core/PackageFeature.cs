@@ -98,5 +98,6 @@ namespace WixMVVMBurnUI.Core
         }
 
         public FeatureState CurrentInstallState { get; internal set; }
+        public FeatureState RequestedState { get; internal set; }
     }
 }

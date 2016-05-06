@@ -14,12 +14,17 @@
       <Payload SourceFile="$(var.SimpleSetupBurnUI.TargetPath)" />
     </BootstrapperApplicationRef>
 
+    <Variable Name="MyBurnVariable1" bal:Overridable="yes" Type="numeric" Value="0" Hidden="yes" />
+    <Variable Name="MyBurnVariable2" bal:Overridable="yes" Type="numeric" Value="0" />
+      
     <Chain DisableSystemRestore="yes">
       <PackageGroupRef Id="NetFx452Web"/>
 
       <RollbackBoundary />
 			<!-- TODO: Define the list of chained packages. -->
-			 <MsiPackage SourceFile="$(var.SimpleSetupProject.TargetDir)SimpleSetupProject.msi"  EnableFeatureSelection="yes"/> 
+      <MsiPackage SourceFile="$(var.SimpleSetupProject.TargetDir)SimpleSetupProject.msi"  EnableFeatureSelection="yes">
+        <MsiProperty Name="INSTALLFOLDER" Value="[INSTALLFOLDER]"/>
+      </MsiPackage>
 		</Chain>
 	</Bundle>
 </Wix>

@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
 using System.Reflection;
+using System.Security;
 using System.Windows.Threading;
 using System.Xml.Linq;
 using WixMVVMBurnUI.Core;
@@ -265,6 +267,8 @@ namespace WixMVVMBurnUI
                             this.mainView.Closed += OnWindowClosed;
                             this.mainView.Show();
 
+                            this.ParseCommandLine();
+
                             this.Engine.Detect();
                             this.Engine.CloseSplashScreen();
 
@@ -294,6 +298,8 @@ namespace WixMVVMBurnUI
                 //Slient Mode
                 try
                 {
+                    this.ParseCommandLine();
+
                     this.Engine.Detect();
                     this.Engine.Quit(this.model.FinalResult);
                 }
@@ -319,6 +325,47 @@ namespace WixMVVMBurnUI
             }
         }
 
+        /// <summary>
+        /// Logs the bootstrapper event.
+        /// </summary>
+        /// <param name="eventArgs">The <see cref="EventArgs"/> instance containing the event data.</param>
+        /// <param name="text">The text.</param>
+        public void LogBootstrapperLeaveEvent(EventArgs eventArgs, [System.Runtime.CompilerServices.CallerMemberName] string text = "")
+        {
+            text = "Leave Method: Bootstrapper." + text;
+            this.WriteToLog(Wix.LogLevel.Verbose, text);
+        }
+
+        /// <summary>
+        /// Logs the bootstrapper event.
+        /// </summary>
+        /// <param name="eventArgs">The <see cref="EventArgs"/> instance containing the event data.</param>
+        /// <param name="text">The text.</param>
+        public void LogBootstrapperEnterEvent(EventArgs eventArgs, [System.Runtime.CompilerServices.CallerMemberName] string text = "")
+        {
+            text = "Enter Method: Bootstrapper." + text;
+            if (eventArgs != null)
+            {
+                text += " [";
+
+                var properties = eventArgs.GetType().GetProperties();
+                if (properties.Length == 0)
+                {
+                    text += "<no properties>";
+                }
+
+                for (int i = 0; i < properties.Length; i++)
+                {
+                    var propValue = GetPropertyValue(properties[i], eventArgs);
+                    text += properties[i].Name + "=" + propValue + " | ";
+                }
+
+                text = text.Trim().TrimEnd('|').Trim();
+                text += "]";
+            }
+            this.WriteToLog(Wix.LogLevel.Verbose, text);
+        }
+
         /// <summary>Writes the specified <paramref name="message"/> to the log file.</summary>
         /// <param name="message">The message to write.</param>
         public void LogStandard(string message)
@@ -337,6 +384,29 @@ namespace WixMVVMBurnUI
             {
                 WriteToLog(Wix.LogLevel.Debug, message);
             }
+        }
+
+        private static string GetPropertyValue(PropertyInfo propertyInfo, object obj)
+        {
+            var propertyValue = propertyInfo.GetValue(obj, null);
+            if (propertyValue == null)
+            {
+                return string.Empty;
+            }
+
+            var propertyValueList = propertyValue as IEnumerable;
+            if (propertyValueList == null || propertyValue is string)
+            {
+                return propertyValue.ToString();
+            }
+
+            var propertyValues = new List<string>();
+            foreach (var propertyValueListItem in propertyValueList)
+            {
+                propertyValues.Add(propertyValueListItem.ToString());
+            }
+
+            return string.Join("#", propertyValues);
         }
 
         /// <summary>Writes a log entry for the specified <paramref name="error"/>.</summary>
@@ -382,35 +452,75 @@ namespace WixMVVMBurnUI
 
             if (this.model != null)
             {
-                this.TryInvoke(new Action(() => { this.model.OnLogMessage(level, message); }));
+                this.OnLogMessage(level, message);
             }
         }
 
         #endregion Logging
 
-        #region TryInvoke
+        #region Initialize
 
-        /// <summary>Attempts to invoke the specified <paramref name="action" /> on the main window dispatcher.</summary>
-        /// <param name="action">The action to invoke.</param>
-        internal void TryInvoke(Action action)
+        private void ParseCommandLine()
         {
-            try
+            // Get array of arguments based on the system parsing algorithm.
+            string[] args = this.Command.GetCommandLineArgs();
+            if (args != null)
             {
-                if (Dispatcher != null)
+                for (int i = 0; i < args.Length; ++i)
                 {
-                    Dispatcher.Invoke(action, null);
-                }
-                else
-                {
-                    action();
+                    //parseCommand
+                    if (args[i].StartsWith("-", StringComparison.InvariantCultureIgnoreCase) || args[i].StartsWith("/", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        string[] param = args[i].Split(new char[] { '=' }, 2);
+                        string commandName = param[0].Remove(0, 1);
+                        string value = param.Length > 1 ? param[1].Trim() : string.Empty;
+
+                        this.OnCommandLineParsing(commandName, value, CommandLineArgumentType.Command);
+                    }
+                    else
+                    {
+                        string[] param = args[i].Split(new char[] { '=' }, 2);
+                        string parameter = param[0];
+                        string value = param.Length > 1 ? param[1].Trim() : string.Empty;
+
+                        bool handled = false;
+                        bool secured = parameter.StartsWith("~", StringComparison.InvariantCultureIgnoreCase);
+                        CommandLineArgumentType type = CommandLineArgumentType.Parameter;
+                        if (secured)
+                        {
+                            type = CommandLineArgumentType.SecuredParameter;
+                            parameter = parameter.Remove(0, 1);
+                        }
+
+                        handled = this.OnCommandLineParsing(parameter, value, type);
+
+                        if (!handled)
+                        {
+                            if (secured)
+                            {
+                                if (this.Engine.SecureStringVariables.Contains(parameter))
+                                {
+                                    SecureString secString = new SecureString();
+                                    foreach (char c in value)
+                                    {
+                                        secString.AppendChar(c);
+                                    }
+                                    secString.MakeReadOnly();
+                                    this.Engine.SecureStringVariables[parameter] = secString;
+                                }
+                            }
+                            else
+                            {
+                                if (this.Engine.StringVariables.Contains(parameter))
+                                {
+                                    this.Engine.StringVariables[parameter] = value;
+                                }
+                            }
+                        }
+                    }
                 }
             }
-            catch (Exception e) { this.LogError("An error occurred invoking an action. Details: {0}", e); }
         }
-
-        #endregion TryInvoke
-
-        #region Initialize
 
         public void Initialize()
         {

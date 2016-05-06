@@ -3,12 +3,13 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Security;
     using Core;
     using Wix = Microsoft.Tools.WindowsInstallerXml.Bootstrapper;
 
     public partial class BootstrapperApplicationModel
     {
-        private const string BurnBundleInstallDirectoryVariable = "InstallFolder";
+        private const string BurnBundleInstallDirectoryVariable = "INSTALLFOLDER";
         private const string BurnBundleLayoutDirectoryVariable = "WixBundleLayoutDirectory";
         private const string BurnBundleVersionVariable = "WixBundleVersion";
         private Version version;
@@ -121,27 +122,25 @@
             this.Engine.StringVariables[variableName] = value;
         }
 
+        internal void PlanAction(Wix.LaunchAction action)
+        {
+            this.Bootstrapper.LogStandard("Plan Action: " + action);
+            this.PlannedAction = action;
+            this.Engine.Plan(action);
+        }
+
+        public void SetBurnSecuredVariable(string variableName, string value)
+        {
+            SecureString secString = new SecureString();
+            foreach (char c in value)
+            {
+                secString.AppendChar(c);
+            }
+            secString.MakeReadOnly();
+            this.Engine.SecureStringVariables[variableName] = secString;
+        }
+
         #region Bundle and Feature Information detecting
-
-        private void HandleExistingPackageDetected(Wix.DetectRelatedMsiPackageEventArgs e)
-        {
-            string existingPackageProductCode = e.ProductCode;
-
-            Wix.RelatedOperation actionToBeApplicedToExistingPackage = e.Operation;
-            string existingPackageId = e.PackageId;
-            Version existingPackageVersion = e.Version;
-
-            //update your model objects here (search models by PackageId)
-        }
-
-        private void HandleExistingBundleDetected(Wix.DetectRelatedBundleEventArgs e)
-        {
-            Version existingBundleVersion = e.Version;
-            string existingBundleProductCode = e.ProductCode;
-            Wix.RelatedOperation actionToBeAppliedToExistingBundle = e.Operation;
-
-            //update your model object here
-        }
 
         /// <summary>
         /// when engine detects a package, populate the appropriate local objects,
@@ -150,8 +149,11 @@
         private void SetPackageDetectedState(Wix.DetectPackageCompleteEventArgs args)
         {
             var package = this.BundlePackages.FirstOrDefault(pkg => pkg.Package == args.PackageId);
-            Wix.PackageState currentState = args.State;
-            package.CurrentInstallState = currentState;
+            if (package != null)
+            {
+                Wix.PackageState currentState = args.State;
+                package.CurrentInstallState = currentState;
+            }
         }
 
         /// <summary>
@@ -161,13 +163,54 @@
         private void SetFeatureDetectedState(Wix.DetectMsiFeatureEventArgs args)
         {
             var package = this.BundlePackages.FirstOrDefault(pkg => pkg.Package == args.PackageId);
-            var feature = package.AllFeatures.FirstOrDefault(feat => feat.Feature == args.FeatureId);
-            Wix.FeatureState currentState = args.State;
+            if (package != null)
+            {
+                var feature = package.AllFeatures.FirstOrDefault(feat => feat.Feature == args.FeatureId);
+                if (feature != null)
+                {
+                    Wix.FeatureState currentState = args.State;
 
-            feature.CurrentInstallState = args.State;
+                    feature.CurrentInstallState = args.State;
+                }
+            }
+        }
+
+        ///
+        /// when engine plans action for a package, set the requested future state of
+        /// the package based on what the user requested
+        ///
+        private void SetPackagePlannedState(Wix.PlanPackageBeginEventArgs planPackageBeginEventArgs)
+        {
+            var pkgId = planPackageBeginEventArgs.PackageId;
+            var pkg = BundlePackages.FirstOrDefault(p => p.Package == pkgId);
+
+            if (pkg != null)
+            {
+                //I’m assuming a property “RequestedInstallState” on your model
+                //of type RequestState.
+                planPackageBeginEventArgs.State = pkg.RequestedInstallState;
+            }
+        }
+
+        ///
+        /// when engine plans action for a feature, set the requested future state of
+        /// the package based on what the user requested
+        ///
+        private void SetFeaturePlannedState(Wix.PlanMsiFeatureEventArgs planMsiFeatureEventArgs)
+        {
+            var pkg = BundlePackages.First(p => p.Package == planMsiFeatureEventArgs.PackageId);
+            if (pkg != null)
+            {
+                var feature = pkg.AllFeatures.First(feat => feat.Feature == planMsiFeatureEventArgs.FeatureId);
+                if (feature != null)
+                {
+                    //I’m assuming a property “RequestedState” on your model
+                    //of type FeatureState.
+                    planMsiFeatureEventArgs.State = feature.RequestedState;
+                }
+            }
         }
 
         #endregion Bundle and Feature Information detecting
-
     }
 }

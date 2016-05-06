@@ -1,0 +1,1 @@
+".\bin\Debug\SimpleSetupBootstrapper.exe" -s -log ".\bin\Debug\install.log" InstallFolder="C:\Temp\Test" ~MyBurnVariable1="1" MyBurnVariable2=5

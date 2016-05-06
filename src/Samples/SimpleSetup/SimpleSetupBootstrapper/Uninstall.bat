@@ -1,0 +1,1 @@
+".\bin\Debug\SimpleSetupBootstrapper.exe" -uninstall -s -log ".\bin\Debug\uninstall.log"

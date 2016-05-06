@@ -123,7 +123,11 @@
 
         /// <summary>Called when an MSI feature has been detected for a package.</summary>
         /// <param name="args">The arguments of the event.</param>
-        public void OnDetectMsiFeature(WPFBootstrapperEventArgs<Wix.DetectMsiFeatureEventArgs> args) { DetectMsiFeature?.Invoke(this, args); }
+        public void OnDetectMsiFeature(WPFBootstrapperEventArgs<Wix.DetectMsiFeatureEventArgs> args)
+        {
+            this.SetFeatureDetectedState(args.Arguments);
+            DetectMsiFeature?.Invoke(this, args);
+        }
 
         /// <summary>Called when an MSI feature has been detected for a package.</summary>
         public event EventHandler<WPFBootstrapperEventArgs<Wix.DetectMsiFeatureEventArgs>> DetectMsiFeature;
@@ -137,7 +141,11 @@
 
         /// <summary>Called when the detection for a specific package has completed.</summary>
         /// <param name="args">The arguments of the event.</param>
-        public void OnDetectPackageComplete(WPFBootstrapperEventArgs<Wix.DetectPackageCompleteEventArgs> args) { DetectPackageComplete?.Invoke(this, args); }
+        public void OnDetectPackageComplete(WPFBootstrapperEventArgs<Wix.DetectPackageCompleteEventArgs> args)
+        {
+            this.SetPackageDetectedState(args.Arguments);
+            DetectPackageComplete?.Invoke(this, args);
+        }
 
         /// <summary>Called when the detection for a specific package has completed.</summary>
         public event EventHandler<WPFBootstrapperEventArgs<Wix.DetectPackageCompleteEventArgs>> DetectPackageComplete;
@@ -298,14 +306,22 @@
 
         /// <summary>Called when the engine is about to plan an MSI feature of a specific package.</summary>
         /// <param name="args">The arguments of the event.</param>
-        public void OnPlanMsiFeature(WPFBootstrapperEventArgs<Wix.PlanMsiFeatureEventArgs> args) { PlanMsiFeature?.Invoke(this, args); }
+        public void OnPlanMsiFeature(WPFBootstrapperEventArgs<Wix.PlanMsiFeatureEventArgs> args)
+        {
+            this.SetFeaturePlannedState(args.Arguments);
+            PlanMsiFeature?.Invoke(this, args);
+        }
 
         /// <summary>Called when the engine is about to plan an MSI feature of a specific package.</summary>
         public event EventHandler<WPFBootstrapperEventArgs<Wix.PlanMsiFeatureEventArgs>> PlanMsiFeature;
 
         /// <summary>Called when the engine has begun planning the installation of a specific package.</summary>
         /// <param name="args">The arguments of the event.</param>
-        public void OnPlanPackageBegin(WPFBootstrapperEventArgs<Wix.PlanPackageBeginEventArgs> args) { PlanPackageBegin?.Invoke(this, args); }
+        public void OnPlanPackageBegin(WPFBootstrapperEventArgs<Wix.PlanPackageBeginEventArgs> args)
+        {
+            this.SetPackagePlannedState(args.Arguments);
+            PlanPackageBegin?.Invoke(this, args);
+        }
 
         /// <summary>Called when the engine has begun planning the installation of a specific package.</summary>
         public event EventHandler<WPFBootstrapperEventArgs<Wix.PlanPackageBeginEventArgs>> PlanPackageBegin;
@@ -410,6 +426,16 @@
 
         /// <summary>alled when the a message should be logged.</summary>
         public event EventHandler<LogEventArgs> LogMessage;
+
+        /// <summary>
+        /// Called when command line is parsing.
+        /// </summary>
+        /// <param name="args">The arguments of the event.</param>
+        /// <returns><c>true</c> if arguments was handled, <c>false</c> otherwise.</returns>
+        public void OnCommandLineParsing(CommandLineParseEventArgs args) { CommandLineParsing?.Invoke(this, args); }
+
+        /// <summary>alled when the a message should be logged.</summary>
+        public event EventHandler<CommandLineParseEventArgs> CommandLineParsing;
     }
 
     public class LogEventArgs : EventArgs
@@ -423,5 +449,32 @@
             this.Level = level;
             this.Message = message;
         }
+    }
+
+    public class CommandLineParseEventArgs : EventArgs
+    {
+        public string Name { get; private set; }
+
+        public string Value { get; private set; }
+
+        public CommandLineArgumentType Type { get; private set; }
+
+        /// <summary>True to cancel the event, otherwise false.</summary>
+        public bool Handled { get; set; }
+
+        public CommandLineParseEventArgs(string name, string value, CommandLineArgumentType type)
+        {
+            this.Name = name;
+            this.Value = value;
+            this.Type = type;
+            this.Handled = false;
+        }
+    }
+
+    public enum CommandLineArgumentType
+    {
+        Parameter,
+        SecuredParameter,
+        Command
     }
 }

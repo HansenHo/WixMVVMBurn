@@ -13,8 +13,8 @@ namespace WixMVVMBurnUI.Models
         /// <param name="args">The original event arguments.</param>
         public WPFBootstrapperEventArgs(T args)
         {
-            Arguments = args;
-            Cancel = false;
+            this.Arguments = args;
+            this.Cancel = false;
         }
 
         #endregion Constructors

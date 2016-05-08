@@ -65,14 +65,6 @@ namespace WixMVVMBurnUI.Core
             }
         }
 
-        public int Display
-        {
-            get
-            {
-                return int.Parse(xNode.Attribute(nameof(Display))?.Value);
-            }
-        }
-
         public int Level
         {
             get
@@ -89,15 +81,39 @@ namespace WixMVVMBurnUI.Core
             }
         }
 
-        public string Attributes
+        public MsiSetFeatureAttributes Attributes
         {
             get
             {
-                return xNode.Attribute(nameof(Attributes))?.Value;
+                XAttribute attr = xNode.Attribute(nameof(Attributes));
+                if (attr != null)
+                {
+                    return (MsiSetFeatureAttributes)int.Parse(attr.Value);
+                }
+                else
+                {
+                    return MsiSetFeatureAttributes.None;
+                }
+            }
+        }
+
+        public MsiSetFeatureDisplay Display
+        {
+            get
+            {
+                XAttribute attr = xNode.Attribute(nameof(Display));
+                if (attr != null)
+                {
+                    return (MsiSetFeatureDisplay)int.Parse(attr.Value);
+                }
+                else
+                {
+                    return MsiSetFeatureDisplay.Collapse;
+                }
             }
         }
 
         public FeatureState CurrentInstallState { get; internal set; }
-        public FeatureState RequestedState { get; internal set; }
+        public FeatureState? RequestedState { get; internal set; }
     }
 }

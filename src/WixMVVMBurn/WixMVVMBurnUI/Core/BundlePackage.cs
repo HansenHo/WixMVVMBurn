@@ -1,11 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Xml.Linq;
-using Microsoft.Tools.WindowsInstallerXml.Bootstrapper;
-
-namespace WixMVVMBurnUI.Core
+﻿namespace WixMVVMBurnUI.Core
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.Xml;
+    using System.Xml.Linq;
+    using Microsoft.Tools.WindowsInstallerXml.Bootstrapper;
+
     [DebuggerDisplay("Display: {DisplayName}, Id: {ProductCode}, Version: {Version}")]
     public class BundlePackage
     {
@@ -85,16 +86,48 @@ namespace WixMVVMBurnUI.Core
             }
         }
 
-        public string PackageType
+        public PackageType PackageType
         {
             get
             {
-                return xNode.Attribute(nameof(PackageType))?.Value;
+                XAttribute attr = xNode.Attribute(nameof(PackageType));
+
+                return (PackageType)PackageType.Parse(typeof(PackageType), attr.Value.ToUpperInvariant());
+            }
+        }
+
+        public bool Permanent
+        {
+            get
+            {
+                XAttribute attr = xNode.Attribute(nameof(Permanent));
+
+                return attr == null ? false : XmlConvert.ToBoolean(attr.Value);
+            }
+        }
+
+        public bool Vital
+        {
+            get
+            {
+                XAttribute attr = xNode.Attribute(nameof(Vital));
+
+                return attr == null ? false : XmlConvert.ToBoolean(attr.Value);
+            }
+        }
+
+        public bool DisplayInternalUI
+        {
+            get
+            {
+                XAttribute attr = xNode.Attribute(nameof(DisplayInternalUI));
+
+                return attr == null ? false : XmlConvert.ToBoolean(attr.Value);
             }
         }
 
         public PackageState CurrentInstallState { get; internal set; }
 
-        public RequestState RequestedInstallState { get; internal set; }
+        public RequestState? RequestedInstallState { get; internal set; }
     }
 }

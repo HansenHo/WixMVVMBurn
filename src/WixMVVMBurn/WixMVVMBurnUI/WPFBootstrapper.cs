@@ -333,6 +333,25 @@ namespace WixMVVMBurnUI
         public void LogBootstrapperLeaveEvent(EventArgs eventArgs, [System.Runtime.CompilerServices.CallerMemberName] string text = "")
         {
             text = "Leave Method: Bootstrapper." + text;
+            if (eventArgs != null)
+            {
+                text += " [";
+
+                var properties = eventArgs.GetType().GetProperties();
+                if (properties.Length == 0)
+                {
+                    text += "<no properties>";
+                }
+
+                for (int i = 0; i < properties.Length; i++)
+                {
+                    var propValue = GetPropertyValue(properties[i], eventArgs);
+                    text += properties[i].Name + "=" + propValue + " | ";
+                }
+
+                text = text.Trim().TrimEnd('|').Trim();
+                text += "]";
+            }
             this.WriteToLog(Wix.LogLevel.Verbose, text);
         }
 

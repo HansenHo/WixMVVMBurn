@@ -9,6 +9,7 @@
 
     public partial class BootstrapperApplicationModel
     {
+        private const string BurnBundleInstallLevelVariable = "INSTALLLEVEL";
         private const string BurnBundleInstallDirectoryVariable = "INSTALLFOLDER";
         private const string BurnBundleLayoutDirectoryVariable = "WixBundleLayoutDirectory";
         private const string BurnBundleVersionVariable = "WixBundleVersion";
@@ -64,6 +65,27 @@
             set
             {
                 this.Engine.StringVariables[BurnBundleInstallDirectoryVariable] = value;
+            }
+        }
+
+        /// <summary>
+        /// Get or set the install level.
+        /// </summary>
+        public long InstallLevel
+        {
+            get
+            {
+                if (!this.Engine.NumericVariables.Contains(BurnBundleInstallLevelVariable))
+                {
+                    return 1;
+                }
+
+                return this.Engine.NumericVariables[BurnBundleInstallLevelVariable];
+            }
+
+            set
+            {
+                this.Engine.NumericVariables[BurnBundleInstallLevelVariable] = value;
             }
         }
 
@@ -129,6 +151,12 @@
             this.Engine.Plan(action);
         }
 
+        internal void Apply(IntPtr hWnd)
+        {
+            this.Bootstrapper.LogStandard("Apply: " + this.PlannedAction);
+            this.Engine.Apply(hWnd);
+        }
+
         public void SetBurnSecuredVariable(string variableName, string value)
         {
             SecureString secString = new SecureString();
@@ -186,9 +214,11 @@
 
             if (pkg != null)
             {
-                //I’m assuming a property “RequestedInstallState” on your model
-                //of type RequestState.
-                planPackageBeginEventArgs.State = pkg.RequestedInstallState;
+                if (pkg.RequestedInstallState.HasValue)
+                {
+                    //override default value set by bootstrapper engine
+                    planPackageBeginEventArgs.State = pkg.RequestedInstallState.Value;
+                }
             }
         }
 
@@ -204,13 +234,42 @@
                 var feature = pkg.AllFeatures.First(feat => feat.Feature == planMsiFeatureEventArgs.FeatureId);
                 if (feature != null)
                 {
-                    //I’m assuming a property “RequestedState” on your model
-                    //of type FeatureState.
-                    planMsiFeatureEventArgs.State = feature.RequestedState;
+                    if (feature.RequestedState.HasValue)
+                    {
+                        planMsiFeatureEventArgs.State = feature.RequestedState.Value;
+                    }
+                    else if (feature.Level > 0 && feature.Level <= this.InstallLevel)
+                    {
+                        planMsiFeatureEventArgs.State = Wix.FeatureState.Local;
+                    }
                 }
             }
         }
 
         #endregion Bundle and Feature Information detecting
+
+        #region Logging
+
+        public void LogVerbose(string message)
+        {
+            this.Bootstrapper.LogVerbose(message);
+        }
+
+        public void LogDebug(string message)
+        {
+            this.Bootstrapper.LogDebug(message);
+        }
+
+        public void LogStandard(string message)
+        {
+            this.Bootstrapper.LogStandard(message);
+        }
+
+        public void LogError(string message)
+        {
+            this.Bootstrapper.LogError(message);
+        }
+
+        #endregion Logging
     }
 }

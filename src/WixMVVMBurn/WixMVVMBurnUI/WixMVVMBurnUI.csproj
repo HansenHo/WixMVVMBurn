@@ -110,7 +110,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Core\HResult.cs" />
+    <Compile Include="Core\MsiSetFeatureAttributes.cs" />
+    <Compile Include="Core\MsiSetFeatureDisplay.cs" />
     <Compile Include="Core\NativeMethods.cs" />
+    <Compile Include="Core\PackageType.cs" />
     <Compile Include="Core\StartupWindowAttribute.cs" />
     <Compile Include="Core\BundlePackage.cs" />
     <Compile Include="Core\MBAPrereqPackage.cs" />

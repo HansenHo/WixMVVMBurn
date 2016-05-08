@@ -24,6 +24,8 @@
     <Compile Include="Product.wxs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="TextFile2.txt" />
+    <Content Include="TextFile1a.txt" />
     <Content Include="TextFile1.txt" />
   </ItemGroup>
   <Import Project="$(WixTargetsPath)" />

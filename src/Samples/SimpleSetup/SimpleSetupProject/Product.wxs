@@ -6,9 +6,14 @@
 		<MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
 		<MediaTemplate EmbedCab="yes" />
 
-		<Feature Id="ProductFeature" Title="SimpleSetupProject" Level="1">
+		<Feature Id="ProductFeature" Title="SimpleSetupProject" Level="1" Absent="disallow">
 			<ComponentGroupRef Id="ProductComponents" />
-			<Feature Id="SubFeature" AllowAdvertise="yes" Description="MyDescription"></Feature>
+			<Feature Id="SubFeature1" Level="1" AllowAdvertise="yes"  Description="MyDescription1">
+        <ComponentGroupRef Id="SubFeature1Components" />
+      </Feature>
+      <Feature Id="SubFeature2" Level="5" AllowAdvertise="yes" Description="MyDescription2">
+        <ComponentGroupRef Id="SubFeature2Components" />
+      </Feature>
 		</Feature>
 	</Product>
 
@@ -27,5 +32,17 @@
 				 <File Id="FILE_TextFile1.txt" Source="TextFile1.txt" KeyPath="yes" />
 			 </Component> 
 		</ComponentGroup>
+    <ComponentGroup Id="SubFeature1Components" Directory="INSTALLFOLDER">
+      <!-- TODO: Remove the comments around this Component element and the ComponentRef below in order to add resources to this installer. -->
+      <Component Id="CMP_TextFile1a.txt" Guid="CB70B151-2520-4A39-9265-6E6A58D44755">
+        <File Id="FILE_TextFile1a.txt" Source="TextFile1a.txt" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+    <ComponentGroup Id="SubFeature2Components" Directory="INSTALLFOLDER">
+      <!-- TODO: Remove the comments around this Component element and the ComponentRef below in order to add resources to this installer. -->
+      <Component Id="CMP_TextFile2.txt" Guid="636A9654-E703-491E-B41E-A56CF5BC8495">
+        <File Id="FILE_TextFile2.txt" Source="TextFile2.txt" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
 	</Fragment>
 </Wix>

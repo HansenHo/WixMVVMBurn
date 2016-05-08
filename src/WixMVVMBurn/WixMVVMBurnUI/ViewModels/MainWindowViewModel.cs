@@ -10,7 +10,7 @@
     /// <summary>
     /// UserControl view model.
     /// </summary>
-    public partial class MainWindowViewModel : ViewModelBase
+    public class MainWindowViewModel : ViewModelBase
     {
         public BootstrapperApplicationModel Model { get; private set; }
 
@@ -33,11 +33,11 @@
 
             // This is called when the bundle is detected
             this.Model.DetectRelatedBundle += Model_DetectRelatedBundle;
+
             // This is called when a dectedtion is completed
             this.Model.DetectComplete += Model_DetectComplete;
             this.Model.PlanComplete += Model_PlanComplete;
             this.Model.CommandLineParsing += Model_CommandLineParsing;
-            
         }
 
         public IntPtr ViewWindowHandle { get; set; }
@@ -189,12 +189,11 @@
 
             if (LaunchAction.Uninstall == this.Model.Command.Action)
             {
-                this.Model.Engine.Log(LogLevel.Verbose, "Invoking automatic plan for uninstall");
+                this.Model.LogVerbose("Invoking automatic plan for uninstall");
                 this.PlanAction(LaunchAction.Uninstall);
             }
             else if (Hresult.Succeeded(e.Arguments.Status))
             {
-                // block if CLR v2 isn't available; sorry, it's needed for the MSBuild tasks
                 if (this.Downgrade)
                 {
                     // TODO: What behavior do we want for downgrade?
@@ -208,7 +207,7 @@
                 else if (this.Model.Command.Display != Display.Full)
                 {
                     // If we're not waiting for the user to click install, dispatch plan with the default action.
-                    this.Model.Engine.Log(LogLevel.Verbose, "Invoking automatic plan for non-interactive mode.");
+                    this.Model.LogVerbose("Invoking automatic plan for non-interactive mode.");
                     this.PlanAction(this.Model.Command.Action);
                 }
             }
@@ -233,9 +232,9 @@
                 this.PreApplyState = this.InstallState;
                 this.InstallState = InstallationState.Applying;
 
-                this.PlanAction(LaunchAction.Unknown);
+                //this.PlanAction(LaunchAction.Unknown);
 
-                this.Model.Engine.Apply(this.ViewWindowHandle);
+                this.Model.Apply(this.ViewWindowHandle);
             }
             else
             {

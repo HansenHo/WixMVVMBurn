@@ -95,7 +95,11 @@
 
         /// <summary>Called when the overall detection phase has begun.</summary>
         /// <param name="args">The arguments of the event.</param>
-        public void OnDetectBegin(WPFBootstrapperEventArgs<Wix.DetectBeginEventArgs> args) { DetectBegin?.Invoke(this, args); }
+        public void OnDetectBegin(WPFBootstrapperEventArgs<Wix.DetectBeginEventArgs> args)
+        {
+            this.SetInstallationStateOnDetectBegin(args.Arguments);
+            DetectBegin?.Invoke(this, args);
+        }
 
         /// <summary>Called when the overall detection phase has begun.</summary>
         public event EventHandler<WPFBootstrapperEventArgs<Wix.DetectBeginEventArgs>> DetectBegin;
@@ -159,7 +163,11 @@
 
         /// <summary>Called when a related bundle has been detected for a bundle.</summary>
         /// <param name="args">The arguments of the event.</param>
-        public void OnDetectRelatedBundle(WPFBootstrapperEventArgs<Wix.DetectRelatedBundleEventArgs> args) { DetectRelatedBundle?.Invoke(this, args); }
+        public void OnDetectRelatedBundle(WPFBootstrapperEventArgs<Wix.DetectRelatedBundleEventArgs> args)
+        {
+            this.SetRelatedBundleDetectedState(args.Arguments);
+            DetectRelatedBundle?.Invoke(this, args);
+        }
 
         /// <summary>Called when a related bundle has been detected for a bundle.</summary>
         public event EventHandler<WPFBootstrapperEventArgs<Wix.DetectRelatedBundleEventArgs>> DetectRelatedBundle;

@@ -1,31 +1,27 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace WixMVVMBurnUI.Core
+﻿namespace WixMVVMBurnUI.Core
 {
-    /// <summary>
-    /// The states of detection.
-    /// </summary>
-    public enum DetectionState
-    {
-        Absent,
-        Present,
-        Newer,
-    }
-
     /// <summary>
     /// The states of installation.
     /// </summary>
     public enum InstallationState
     {
-        Initializing,
+        Initializing = 0,
         Detecting,
-        Waiting,
+        Detected,
         Planning,
         Applying,
         Applied,
+        Canceled,
         Failed,
+    }
+
+    [System.Serializable]
+    public enum ProductInstallationState
+    {
+        Unknown,
+        OlderVersionInstalled,
+        NotInstalled,
+        SameVersionInstalled,
+        NewerVersionInstalled
     }
 }

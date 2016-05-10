@@ -1,30 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
-      xmlns:bal="http://schemas.microsoft.com/wix/BalExtension"
-         xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
-  
+			xmlns:bal="http://schemas.microsoft.com/wix/BalExtension"
+				 xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+	
 	<Bundle Name="SimpleSetupBootstrapper" Version="1.0.0.0" Manufacturer="MySelf Company" UpgradeCode="5caf30fe-dcc7-4854-ae20-68dff7820bbe">
-    <BootstrapperApplicationRef Id="ManagedBootstrapperApplicationHost" >
-      <Payload SourceFile="BootstrapperCore.config" />
-      <Payload SourceFile="$(var.SimpleSetupBurnUI.TargetDir)Catel.Core.dll" />
-      <Payload SourceFile="$(var.SimpleSetupBurnUI.TargetDir)Catel.Extensions.Controls.dll" />
-      <Payload SourceFile="$(var.SimpleSetupBurnUI.TargetDir)Catel.MVVM.dll" />
-      <Payload SourceFile="$(var.SimpleSetupBurnUI.TargetDir)WixMVVMBurnUI.dll" />
-      <Payload SourceFile="$(var.SimpleSetupBurnUI.TargetDir)WixMVVMBurnUI.pdb" />
-      <Payload SourceFile="$(var.SimpleSetupBurnUI.TargetPath)" />
-    </BootstrapperApplicationRef>
+		<BootstrapperApplicationRef Id="ManagedBootstrapperApplicationHost" >
+			<Payload SourceFile="BootstrapperCore.config" />
+			<Payload SourceFile="$(var.SimpleSetupBurnUI.TargetDir)WixMVVMBurnUI.dll" />
+			<Payload SourceFile="$(var.SimpleSetupBurnUI.TargetDir)WixMVVMBurnUI.pdb" />
+			<Payload SourceFile="$(var.SimpleSetupBurnUI.TargetPath)" />
+		</BootstrapperApplicationRef>
 
-    <Variable Name="MyBurnVariable1" bal:Overridable="yes" Type="numeric" Value="0" Hidden="yes" />
-    <Variable Name="MyBurnVariable2" bal:Overridable="yes" Type="numeric" Value="0" />
-      
-    <Chain DisableSystemRestore="yes">
-      <PackageGroupRef Id="NetFx452Web"/>
+		<Variable Name="MyBurnVariable1" bal:Overridable="yes" Type="numeric" Value="0" Hidden="yes" Persisted="yes" />
+		<Variable Name="MyBurnVariable2" bal:Overridable="yes" Type="numeric" Value="0"  Persisted="yes" />
+			
+		<Chain DisableSystemRestore="yes">
+			<PackageGroupRef Id="NetFx452Web"/>
 
-      <RollbackBoundary />
+			<RollbackBoundary />
 			<!-- TODO: Define the list of chained packages. -->
-      <MsiPackage SourceFile="$(var.SimpleSetupProject.TargetDir)SimpleSetupProject.msi"  EnableFeatureSelection="yes">
-        <MsiProperty Name="INSTALLFOLDER" Value="[INSTALLFOLDER]"/>
-      </MsiPackage>
+			<MsiPackage SourceFile="$(var.SimpleSetupProject.TargetDir)SimpleSetupProject.msi"  EnableFeatureSelection="yes" InstallCondition="MyBurnVariable2 = 5">
+				
+				<MsiProperty Name="INSTALLFOLDER" Value="[INSTALLFOLDER]"/>
+			</MsiPackage>
 		</Chain>
 	</Bundle>
 </Wix>

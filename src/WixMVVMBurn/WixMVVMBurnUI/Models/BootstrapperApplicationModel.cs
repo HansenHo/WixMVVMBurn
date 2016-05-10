@@ -126,6 +126,10 @@
             }
         }
 
+        public ProductInstallationState ProductInstallationState { get; private set; }
+
+        public Version NewerProductInstalledVersion { get; private set; }
+
         ///
         /// Requested action from the commandline
         ///
@@ -151,6 +155,11 @@
             this.Engine.Plan(action);
         }
 
+        internal void PlanLayout()
+        {
+            PlanAction(Wix.LaunchAction.Layout);
+        }
+
         internal void Apply(IntPtr hWnd)
         {
             this.Bootstrapper.LogStandard("Apply: " + this.PlannedAction);
@@ -169,6 +178,46 @@
         }
 
         #region Bundle and Feature Information detecting
+
+        private void SetInstallationStateOnDetectBegin(Wix.DetectBeginEventArgs args)
+        {
+            if (args.Installed)
+            {
+                this.ProductInstallationState = ProductInstallationState.SameVersionInstalled;
+            }
+            else
+            {
+                this.ProductInstallationState = ProductInstallationState.NotInstalled;
+            }
+        }
+
+        private void SetRelatedBundleDetectedState(Wix.DetectRelatedBundleEventArgs args)
+        {
+            if (this.PlannedAction == Wix.LaunchAction.Install)
+            {
+                ProductInstallationState stateForCurrentBundleDetection = ProductInstallationState.Unknown;
+                if (args.Operation == Wix.RelatedOperation.Downgrade)
+                {
+                    this.LogStandard("A higher version the bundle is already installed");
+                    stateForCurrentBundleDetection = ProductInstallationState.NewerVersionInstalled;
+                    this.NewerProductInstalledVersion = args.Version;
+                }
+                else if (args.Operation == Wix.RelatedOperation.MajorUpgrade)
+                {
+                    stateForCurrentBundleDetection = ProductInstallationState.OlderVersionInstalled;
+                }
+                else if (args.Operation == Wix.RelatedOperation.MinorUpdate)
+                {
+                    stateForCurrentBundleDetection = ProductInstallationState.OlderVersionInstalled;
+                }
+
+                if (this.ProductInstallationState < stateForCurrentBundleDetection)
+                {
+                    this.LogVerbose("Updating ProductInstallationState to: " + stateForCurrentBundleDetection);
+                    this.ProductInstallationState = stateForCurrentBundleDetection;
+                }
+            }
+        }
 
         /// <summary>
         /// when engine detects a package, populate the appropriate local objects,
@@ -219,6 +268,21 @@
                     //override default value set by bootstrapper engine
                     planPackageBeginEventArgs.State = pkg.RequestedInstallState.Value;
                 }
+                else if (pkg.CurrentInstallState == Wix.PackageState.Present)
+                {
+                    if (this.PlannedAction == Wix.LaunchAction.Uninstall)
+                    {
+                        planPackageBeginEventArgs.State = Wix.RequestState.Absent;
+                    }
+                    else if (this.PlannedAction == Wix.LaunchAction.Repair)
+                    {
+                        planPackageBeginEventArgs.State = Wix.RequestState.Repair;
+                    }
+                    else
+                    {
+                        planPackageBeginEventArgs.State = Wix.RequestState.Present;
+                    }
+                }
             }
         }
 
@@ -238,7 +302,11 @@
                     {
                         planMsiFeatureEventArgs.State = feature.RequestedState.Value;
                     }
-                    else if (feature.Level > 0 && feature.Level <= this.InstallLevel)
+                    else if (this.PlannedAction == Wix.LaunchAction.Uninstall)
+                    {
+                        planMsiFeatureEventArgs.State = Wix.FeatureState.Absent;
+                    }
+                    else if (feature.CurrentInstallState == Wix.FeatureState.Local || (feature.Level > 0 && feature.Level <= this.InstallLevel))
                     {
                         planMsiFeatureEventArgs.State = Wix.FeatureState.Local;
                     }

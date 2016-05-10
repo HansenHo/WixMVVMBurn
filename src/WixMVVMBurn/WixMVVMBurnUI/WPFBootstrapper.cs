@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Configuration;
+using System.ComponentModel.Composition;
+using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using System.Reflection;
 using System.Security;
@@ -47,181 +48,44 @@ namespace WixMVVMBurnUI
         /// <summary>The main user interface for the bootstrap application.</summary>
         private BootstrapperApplicationModel model;
 
-        private MainWindowViewModel viewModel;
-        private BootstrapperApplicationWindow mainView;
+        private IMainWindowViewModel viewModel;
 
-        #region GetApplicationUI
+        [ImportMany(typeof(IBootstrapperMainWindow))]
+        private IBootstrapperMainWindow[] mainViews;
 
-        /// <summary>Gets the <see cref="BootstrapperApplicationWindow" /> derivation from the configured UI implementation assembly.</summary>
-        /// <returns>A BaseBAWindow instance or null.</returns>
-        private BootstrapperApplicationWindow GetApplicationUI()
+        private IBootstrapperMainWindow mainView;
+
+        #region GetApplicationMainViewModel
+
+        private void InitializeApplicationMainViewModel()
         {
-            BootstrapperApplicationWindow retVal = null;
-            string implType = GetAppSetting("BootstrapperUI");
-            Type type = null;
-
-            if (!string.IsNullOrEmpty(implType))
+            try
             {
-                this.LogVerbose("configured implementation = " + implType);
-                try
-                {
-                    type = GetUITypeFromAssembly(implType);
-                }
-                catch (Exception e)
-                {
-                    this.LogError(e);
-                }
-            }
+                DirectoryCatalog catalog = new DirectoryCatalog(".");
+                CompositionContainer container = new CompositionContainer(catalog);
+                container.ComposeParts(this);
 
-            if (type != null)
+                this.mainView = mainViews.FirstOrDefault();
+                if (this.mainView != null)
+                {
+                    this.viewModel = this.mainView.ViewModel;
+                }
+                else
+                {
+                    this.viewModel = new SilentViewModel();
+                }
+
+                this.viewModel.Initialize(this.model);
+            }
+            catch (System.Exception ex)
             {
-                this.LogVerbose("full type name = " + type.AssemblyQualifiedName);
-                try
-                {
-                    retVal = Activator.CreateInstance(type, this.viewModel) as BootstrapperApplicationWindow;
-                }
-                catch (Exception e)
-                {
-                    this.LogError(e);
-                }
+                this.LogError(ex);
+                this.LogError("Failed to get an UI implementation.");
+                this.Engine.Quit(404);
             }
-
-            return retVal;
         }
 
-        /// <summary>Gets the <see cref="BootstrapperApplicationWindow" /> derivation from the configured UI implementation assembly.</summary>
-        /// <returns>A BaseBAWindow instance or null.</returns>
-        private MainWindowViewModel GetApplicationMainViewModel()
-        {
-            MainWindowViewModel retVal = null;
-            string implType = GetAppSetting("BootstrapperUI");
-            Type type = null;
-
-            if (!string.IsNullOrEmpty(implType))
-            {
-                this.LogVerbose("configured implementation = " + implType);
-                try
-                {
-                    type = GetMainViewModelTypeFromAssembly(implType);
-                }
-                catch (Exception e)
-                {
-                    this.LogError(e);
-                }
-            }
-
-            if (type != null)
-            {
-                this.LogVerbose("full type name = " + type.AssemblyQualifiedName);
-                try
-                {
-                    retVal = Activator.CreateInstance(type) as MainWindowViewModel;
-                }
-                catch (Exception e)
-                {
-                    this.LogError(e);
-                }
-            }
-            else
-            {
-                retVal = new MainWindowViewModel();
-            }
-            retVal.Initialize(this.model);
-            return retVal;
-        }
-
-        #endregion GetApplicationUI
-
-        #region GetApplicationUIType
-
-        /// <summary>Gets the application user interface implementation type.</summary>
-        /// <param name="assemblyName">The name of the assembly that should defines the <see cref="StartupWindowAttribute"/>.</param>
-        /// <returns>The type specified by the first assembly that has the <see cref="StartupWindowAttribute"/>.</returns>
-        private Type GetUITypeFromAssembly(string assemblyName)
-        {
-            Type baType = null;
-            Assembly asm = null;
-            StartupWindowAttribute[] attrs = null;
-
-            if (!string.IsNullOrEmpty(assemblyName))
-            {
-                try
-                {
-                    asm = AppDomain.CurrentDomain.Load(assemblyName);
-                }
-                catch (Exception ex)
-                {
-                    this.LogError("An error occurred loading assembly {0}. Details: {1}", assemblyName, ex);
-                }
-            }
-
-            if (asm != null)
-            {
-                attrs = (StartupWindowAttribute[])asm.GetCustomAttributes(typeof(StartupWindowAttribute), false);
-                if (attrs != null && attrs.Length > 0 && attrs[0] != null)
-                {
-                    baType = attrs[0].StartupWindowType;
-                }
-            }
-
-            return baType;
-        }
-
-        /// <summary>Gets the application main view model implementation type.</summary>
-        /// <param name="assemblyName">The name of the assembly that should defines the <see cref="StartupWindowAttribute"/>.</param>
-        /// <returns>The type specified by the first assembly that has the <see cref="StartupWindowAttribute"/>.</returns>
-        private Type GetMainViewModelTypeFromAssembly(string assemblyName)
-        {
-            Type baType = null;
-            Assembly asm = null;
-            StartupWindowAttribute[] attrs = null;
-
-            if (!string.IsNullOrEmpty(assemblyName))
-            {
-                try
-                {
-                    asm = AppDomain.CurrentDomain.Load(assemblyName);
-                }
-                catch (Exception ex)
-                {
-                    this.LogError("An error occurred loading assembly {0}. Details: {1}", assemblyName, ex);
-                }
-            }
-
-            if (asm != null)
-            {
-                attrs = (StartupWindowAttribute[])asm.GetCustomAttributes(typeof(StartupWindowAttribute), false);
-                if (attrs != null && attrs.Length > 0 && attrs[0] != null)
-                {
-                    baType = attrs[0].StartupMainViewModelType;
-                }
-            }
-
-            return baType;
-        }
-
-        #endregion GetApplicationUIType
-
-        #region GetAppSetting
-
-        /// <summary>Attempts to get the value of the application settings with the specified <paramref name="key" />.</summary>
-        /// <param name="key">The key of the setting.</param>
-        /// <returns>The value of the settings or null.</returns>
-        private string GetAppSetting(string key)
-        {
-            string value = null;
-
-            if (ConfigurationManager.AppSettings != null && !string.IsNullOrEmpty(key))
-            {
-                try
-                { value = ConfigurationManager.AppSettings[key]; }
-                catch { value = null; }
-            }
-
-            return value;
-        }
-
-        #endregion GetAppSetting
+        #endregion GetApplicationMainViewModel
 
         #region OnWindowClosed
 
@@ -247,50 +111,41 @@ namespace WixMVVMBurnUI
         {
             System.Diagnostics.Debugger.Launch();
             this.Initialize();
-            this.viewModel = GetApplicationMainViewModel();
+            this.InitializeApplicationMainViewModel();
 
             //
             // Call Engine.Detect, asking the engine to figure out what's on the machine.
             // The engine will run async and use callbacks for reporting results.
             //
 
-            if (this.model.Command.Display == Wix.Display.Passive || this.model.Command.Display == Wix.Display.Full)
+            if (mainView != null && (this.model.Command.Display == Wix.Display.Passive || this.model.Command.Display == Wix.Display.Full))
             {
-                this.mainView = this.GetApplicationUI();
-                if (mainView != null)
+                if (Dispatcher.CurrentDispatcher != null)
                 {
-                    if (Dispatcher.CurrentDispatcher != null)
+                    try
                     {
-                        try
-                        {
-                            Dispatcher = this.mainView.Dispatcher;
-                            this.mainView.Closed += OnWindowClosed;
-                            this.mainView.Show();
+                        Dispatcher = this.mainView.Window.Dispatcher;
+                        this.mainView.Window.Closed += OnWindowClosed;
+                        this.mainView.Window.Show();
 
-                            this.ParseCommandLine();
+                        this.ParseCommandLine();
 
-                            this.Engine.Detect();
-                            this.Engine.CloseSplashScreen();
+                        this.Engine.Detect();
+                        this.Engine.CloseSplashScreen();
 
-                            Dispatcher.Run();
-                            this.Engine.Quit(this.model.FinalResult);
-                        }
-                        catch (Exception ex)
-                        {
-                            this.LogError(ex);
-                            this.Engine.Quit(400);
-                        }
+                        Dispatcher.Run();
+                        this.Engine.Quit(this.model.FinalResult);
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        this.LogError("No current dispatcher.");
+                        this.LogError(ex);
                         this.Engine.Quit(400);
                     }
                 }
                 else
                 {
-                    this.LogError("Failed to get an UI implementation.");
-                    this.Engine.Quit(404);
+                    this.LogError("No current dispatcher.");
+                    this.Engine.Quit(400);
                 }
             }
             else
@@ -301,6 +156,7 @@ namespace WixMVVMBurnUI
                     this.ParseCommandLine();
 
                     this.Engine.Detect();
+                    this.Engine.CloseSplashScreen();
                     this.Engine.Quit(this.model.FinalResult);
                 }
                 catch (Exception ex)
@@ -330,7 +186,7 @@ namespace WixMVVMBurnUI
         /// </summary>
         /// <param name="eventArgs">The <see cref="EventArgs"/> instance containing the event data.</param>
         /// <param name="text">The text.</param>
-        public void LogBootstrapperLeaveEvent(EventArgs eventArgs, [System.Runtime.CompilerServices.CallerMemberName] string text = "")
+        public void LogBootstrapperLeaveEvent(EventArgs eventArgs, string text)
         {
             text = "Leave Method: Bootstrapper." + text;
             if (eventArgs != null)
@@ -360,7 +216,7 @@ namespace WixMVVMBurnUI
         /// </summary>
         /// <param name="eventArgs">The <see cref="EventArgs"/> instance containing the event data.</param>
         /// <param name="text">The text.</param>
-        public void LogBootstrapperEnterEvent(EventArgs eventArgs, [System.Runtime.CompilerServices.CallerMemberName] string text = "")
+        public void LogBootstrapperEnterEvent(EventArgs eventArgs, string text)
         {
             text = "Enter Method: Bootstrapper." + text;
             if (eventArgs != null)
@@ -598,6 +454,8 @@ namespace WixMVVMBurnUI
                     }
                 }
             }
+
+            this.model.PlannedAction = this.Command.Action;
         }
 
         #endregion Initialize

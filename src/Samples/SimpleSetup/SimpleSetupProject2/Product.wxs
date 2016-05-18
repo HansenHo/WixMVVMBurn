@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="4352352C-AC95-4124-BDE8-683F75C26A89" Name="SimpleSetupProject - Part2" Language="1033" Version="1.0.0.0" Manufacturer="MySelf Company" UpgradeCode="E74DC34D-D311-4518-8CA9-903BF54EA0EB">
+    <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Property Id="VARIABLE" Value="1" />
+
+    <Feature Id="ProductFeature" Title="SimpleSetupProject" Level="1" Absent="disallow">
+      <ComponentGroupRef Id="ProductComponents" />
+      <Feature Id="SubFeature1" AllowAdvertise="yes"  Description="MyDescription1">
+        <ComponentGroupRef Id="SubFeature1Components" />
+      </Feature>
+      <Feature Id="SubFeature2" Level="5" AllowAdvertise="yes" Description="MyDescription2">
+        <ComponentGroupRef Id="SubFeature2Components" />
+      </Feature>
+    </Feature>
+  </Product>
+
+  <Fragment>
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="INSTALLFOLDER" Name="SimpleSetupProject2" />
+      </Directory>
+    </Directory>
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+      <!-- TODO: Remove the comments around this Component element and the ComponentRef below in order to add resources to this installer. -->
+      <Component Id="CMP_TextFile1.txt" Guid="BCF8EF6D-D8AA-4B35-94B0-A360FF189C54">
+        <File Id="FILE_TextFile1.txt" Source="TextFile1.txt" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+    <ComponentGroup Id="SubFeature1Components" Directory="INSTALLFOLDER">
+      <!-- TODO: Remove the comments around this Component element and the ComponentRef below in order to add resources to this installer. -->
+      <Component Id="CMP_TextFile1a.txt" Guid="CB70B151-2520-4A39-9265-6E6A58D44755">
+        <File Id="FILE_TextFile1a.txt" Source="TextFile1a.txt" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+    <ComponentGroup Id="SubFeature2Components" Directory="INSTALLFOLDER">
+      <!-- TODO: Remove the comments around this Component element and the ComponentRef below in order to add resources to this installer. -->
+      <Component Id="CMP_TextFile2.txt" Guid="636A9654-E703-491E-B41E-A56CF5BC8495">
+        <File Id="FILE_TextFile2.txt" Source="TextFile2.txt" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+</Wix>

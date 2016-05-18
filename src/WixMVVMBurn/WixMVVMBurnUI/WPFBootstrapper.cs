@@ -109,7 +109,9 @@ namespace WixMVVMBurnUI
         /// <summary>Called when the bootstrap application is run.</summary>
         protected override void Run()
         {
+#if DEBUG
             System.Diagnostics.Debugger.Launch();
+#endif
             this.Initialize();
             this.InitializeApplicationMainViewModel();
 

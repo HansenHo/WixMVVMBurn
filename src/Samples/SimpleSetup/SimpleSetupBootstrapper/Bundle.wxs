@@ -20,7 +20,6 @@
 			<RollbackBoundary />
 			<!-- TODO: Define the list of chained packages. -->
 			<MsiPackage SourceFile="$(var.SimpleSetupProject.TargetDir)SimpleSetupProject.msi"  EnableFeatureSelection="yes" InstallCondition="MyBurnVariable2 = 5">
-				
 				<MsiProperty Name="INSTALLFOLDER" Value="[INSTALLFOLDER]"/>
 			</MsiPackage>
 		</Chain>
